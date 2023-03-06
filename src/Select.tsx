@@ -6,18 +6,28 @@ type SelectOption = {
   value: number;
 };
 
-type SelectProps = {
-  options: SelectOption[];
-  value: SelectOption;
-  onchange: (value: SelectOption | undefined) => void;
+type SingleSelectProps = {
+  multiple?: false;
+  value?: SelectOption;
+  onChange: (value: SelectOption | undefined) => void;
 };
 
-function Select({ options, value, onchange }: SelectProps) {
+type MultipleSelectProps = {
+  multiple: true;
+  value: SelectOption[];
+  onChange: (value: SelectOption[] | []) => void;
+};
+
+type SelectProps = { options: SelectOption[] } & (
+  | SingleSelectProps
+  | MultipleSelectProps
+);
+
+function Select({ multiple, options, value, onChange }: SelectProps) {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [isActiveIndex, setActiveIndex] = useState<number | undefined>();
   const [isHighlighted, setIsHighlighted] = useState<number>(0);
 
-  console.log(isActiveIndex, isHighlighted);
   function ontoggel() {
     setIsOpen((prev) => !prev);
     setIsHighlighted(0);
@@ -28,15 +38,22 @@ function Select({ options, value, onchange }: SelectProps) {
     setIsHighlighted(0);
   }
 
-  function onClose(e: React.MouseEvent<HTMLButtonElement>) {
-    e.stopPropagation();
-    onchange(undefined);
+  function onClose() {
+    multiple ? onChange([]) : onChange(undefined);
   }
 
   function onSelect(index: number, option: SelectOption) {
-    onchange(option);
+    if (multiple) {
+      if (value.includes(option)) {
+        onChange(value.filter((v) => v !== option));
+      } else onChange([...value, option]);
+    } else onChange(option);
     setActiveIndex(index);
     setIsHighlighted(0);
+  }
+
+  function isSelected(option: SelectOption) {
+    return multiple ? value.includes(option) : value === option;
   }
 
   function onHover(index: number) {
@@ -50,7 +67,21 @@ function Select({ options, value, onchange }: SelectProps) {
       tabIndex={0}
       className={styles.container}
     >
-      <span>{value?.label}</span>
+      <span>
+        {multiple
+          ? value.map((v) => (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelect(NaN, v);
+                }}
+                key={v.value}
+              >
+                {v.label} &times;
+              </button>
+            ))
+          : value?.label}
+      </span>
       <button onClick={onClose} className={styles['close-btn']}>
         &times;
       </button>
@@ -60,7 +91,7 @@ function Select({ options, value, onchange }: SelectProps) {
         {options.map((option, index) => (
           <li
             className={`${styles.option} ${
-              isActiveIndex === index ? styles.selected : ''
+              isSelected(option) ? styles.selected : ''
             } ${isHighlighted === index ? styles.highlighted : ''}`}
             onClick={() => onSelect(index, option)}
             key={option.value}
