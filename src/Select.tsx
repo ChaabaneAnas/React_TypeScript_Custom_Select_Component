@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import styles from './select.module.css';
 
 type SelectOption = {
@@ -25,8 +25,42 @@ type SelectProps = { options: SelectOption[] } & (
 
 function Select({ multiple, options, value, onChange }: SelectProps) {
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [isActiveIndex, setActiveIndex] = useState<number | undefined>();
   const [isHighlighted, setIsHighlighted] = useState<number>(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent): void => {
+      if (e.target !== containerRef.current) return;
+      switch (e.code) {
+        case 'Enter':
+        case 'Space':
+          setIsOpen((prev) => !prev);
+          if (isOpen) onSelect(NaN, options[isHighlighted]);
+          break;
+        case 'ArrowUp':
+        case 'ArrowDown':
+          if (!isOpen) {
+            setIsOpen(true);
+            break;
+          }
+          if (e.code === 'ArrowUp' && isHighlighted > 0) {
+            setIsHighlighted((prev) => prev - 1);
+          }
+          if (e.code === 'ArrowDown' && isHighlighted < options.length - 1) {
+            setIsHighlighted((prev) => prev + 1);
+          }
+          break;
+        case 'Escape':
+          setIsOpen(false);
+          break;
+      }
+    };
+    containerRef.current?.addEventListener('keydown', handler);
+
+    return () => {
+      containerRef.current?.removeEventListener('keydown', handler);
+    };
+  }, [isOpen, isHighlighted, options]);
 
   function ontoggel() {
     setIsOpen((prev) => !prev);
@@ -48,7 +82,6 @@ function Select({ multiple, options, value, onChange }: SelectProps) {
         onChange(value.filter((v) => v !== option));
       } else onChange([...value, option]);
     } else onChange(option);
-    setActiveIndex(index);
     setIsHighlighted(0);
   }
 
@@ -62,6 +95,7 @@ function Select({ multiple, options, value, onChange }: SelectProps) {
 
   return (
     <div
+      ref={containerRef}
       onClick={ontoggel}
       onBlur={onblurr}
       tabIndex={0}
