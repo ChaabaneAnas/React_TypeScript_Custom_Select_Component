@@ -67,17 +67,19 @@ function Select({ multiple, options, value, onChange }: SelectProps) {
       tabIndex={0}
       className={styles.container}
     >
-      <span>
+      <span className={styles.value}>
         {multiple
           ? value.map((v) => (
               <button
+                className={styles.badge}
                 onClick={(e) => {
                   e.stopPropagation();
                   onSelect(NaN, v);
                 }}
                 key={v.value}
               >
-                {v.label} &times;
+                {v.label}
+                <span className={styles['remove-btn']}> &times; </span>
               </button>
             ))
           : value?.label}
