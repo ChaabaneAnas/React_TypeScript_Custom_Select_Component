@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import styles from './select.module.css';
 
 type SelectOption = {
@@ -6,18 +6,62 @@ type SelectOption = {
   value: number;
 };
 
-type SelectProps = {
-  options: SelectOption[];
-  value: SelectOption;
-  onchange: (value: SelectOption | undefined) => void;
+type SingleSelectProps = {
+  multiple?: false;
+  value?: SelectOption;
+  onChange: (value: SelectOption | undefined) => void;
 };
 
-function Select({ options, value, onchange }: SelectProps) {
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [isActiveIndex, setActiveIndex] = useState<number | undefined>();
-  const [isHighlighted, setIsHighlighted] = useState<number>(0);
+type MultipleSelectProps = {
+  multiple: true;
+  value: SelectOption[];
+  onChange: (value: SelectOption[] | []) => void;
+};
 
-  console.log(isActiveIndex, isHighlighted);
+type SelectProps = { options: SelectOption[] } & (
+  | SingleSelectProps
+  | MultipleSelectProps
+);
+
+function Select({ multiple, options, value, onChange }: SelectProps) {
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [isHighlighted, setIsHighlighted] = useState<number>(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent): void => {
+      if (e.target !== containerRef.current) return;
+      switch (e.code) {
+        case 'Enter':
+        case 'Space':
+          setIsOpen((prev) => !prev);
+          if (isOpen) onSelect(NaN, options[isHighlighted]);
+          break;
+        case 'ArrowUp':
+        case 'ArrowDown':
+          if (!isOpen) {
+            setIsOpen(true);
+            break;
+          }
+          if (e.code === 'ArrowUp' && isHighlighted > 0) {
+            setIsHighlighted((prev) => prev - 1);
+          }
+          if (e.code === 'ArrowDown' && isHighlighted < options.length - 1) {
+            setIsHighlighted((prev) => prev + 1);
+          }
+          break;
+        case 'Escape':
+          setIsOpen(false);
+          break;
+      }
+    };
+    containerRef.current?.addEventListener('keydown', handler);
+
+    return () => {
+      containerRef.current?.removeEventListener('keydown', handler);
+    };
+  }, [isOpen, isHighlighted, options]);
+
   function ontoggel() {
     setIsOpen((prev) => !prev);
     setIsHighlighted(0);
@@ -28,15 +72,21 @@ function Select({ options, value, onchange }: SelectProps) {
     setIsHighlighted(0);
   }
 
-  function onClose(e: React.MouseEvent<HTMLButtonElement>) {
-    e.stopPropagation();
-    onchange(undefined);
+  function onClose() {
+    multiple ? onChange([]) : onChange(undefined);
   }
 
   function onSelect(index: number, option: SelectOption) {
-    onchange(option);
-    setActiveIndex(index);
+    if (multiple) {
+      if (value.includes(option)) {
+        onChange(value.filter((v) => v !== option));
+      } else onChange([...value, option]);
+    } else onChange(option);
     setIsHighlighted(0);
+  }
+
+  function isSelected(option: SelectOption) {
+    return multiple ? value.includes(option) : value === option;
   }
 
   function onHover(index: number) {
@@ -45,12 +95,29 @@ function Select({ options, value, onchange }: SelectProps) {
 
   return (
     <div
+      ref={containerRef}
       onClick={ontoggel}
       onBlur={onblurr}
       tabIndex={0}
       className={styles.container}
     >
-      <span>{value?.label}</span>
+      <span className={styles.value}>
+        {multiple
+          ? value.map((v) => (
+              <button
+                className={styles.badge}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelect(NaN, v);
+                }}
+                key={v.value}
+              >
+                {v.label}
+                <span className={styles['remove-btn']}> &times; </span>
+              </button>
+            ))
+          : value?.label}
+      </span>
       <button onClick={onClose} className={styles['close-btn']}>
         &times;
       </button>
@@ -60,7 +127,7 @@ function Select({ options, value, onchange }: SelectProps) {
         {options.map((option, index) => (
           <li
             className={`${styles.option} ${
-              isActiveIndex === index ? styles.selected : ''
+              isSelected(option) ? styles.selected : ''
             } ${isHighlighted === index ? styles.highlighted : ''}`}
             onClick={() => onSelect(index, option)}
             key={option.value}

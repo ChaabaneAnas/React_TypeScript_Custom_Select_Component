@@ -15,9 +15,12 @@
   border-color: hsl(200, 100%, 50%);
 }
 
-span {
+.value {
   flex-grow: 1;
   cursor: pointer;
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
 }
 
 .close-btn {
@@ -86,4 +89,31 @@ span {
 
 .active {
   display: block;
+}
+
+.badge {
+  display: flex;
+  align-items: center;
+  gap: .05rem;
+  background: none;
+  outline: none;
+  padding: .15rem .25rem;
+  border: .05rem solid #777;
+  border-radius: .25rem;
+}
+
+.badge:hover,
+.badge:focus {
+  background: hsl(0, 70%, 90%);
+  border-color: hsl(0, 100, 50%);
+}
+
+.badge:hover>.remove-btn,
+.badge:focus>.remove-btn {
+  color: rgb(245, 84, 84)
+}
+
+.badge>.remove-btn {
+  font-size: 1.2rem;
+  color: #777;
 }
